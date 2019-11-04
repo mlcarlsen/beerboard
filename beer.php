@@ -29,7 +29,7 @@ $tap = DEFAULT_BEER_TAP;
 $volume = DEFAULT_BEER_VOLUME;
 
 if (isCli()) {
-    $options = getopt("hv", ['verbose', 'addbeer:', 'timestamp', 'setuser:', 'volume:', 'tap:', 'schema', 'clearbeers', 'clearall', 'name:', 'department:', 'help']);
+    $options = getopt("hv", ['verbose', 'addbeer:', 'timestamp', 'setuser:', 'volume:', 'tap:', 'schema', 'topusers', 'beerlog', 'showallbeers', 'clearbeers', 'clearall', 'name:', 'department:', 'help']);
     foreach ($options as $option => $value) {
         switch ($option) {
             case 'h':
@@ -37,7 +37,7 @@ if (isCli()) {
                 showHelpAndExit();
                 break;
             case 'schema':
-                print MariaDbDatabase::getSchema();
+                print Database::getSchema();
                 exit(0);
                 break;
             case 'addbeer':
@@ -61,75 +61,73 @@ if (isCli()) {
                 $verbose = true;
                 break;
             case 'name':
+                $name = filter_var($value, FILTER_SANITIZE_STRING);
+                if (!isset($options['setuser'])) {
+                    die("The --name option can only be used in combination with the --setuser option\n");
+                }
+                break;
             case 'department':
+                $department = filter_var($value, FILTER_SANITIZE_STRING);
+                if (!isset($options['setuser'])) {
+                    die("The --department option can only be used in combination with the --setuser option\n");
+                }
+                break;
+            case 'beerlog':
+                $action = 'beerlog';
+                break;
+            case 'topusers':
+                $action = 'topusers';
+                break;
             case 'timestamp':
+                $timestamp = filter_var($value, FILTER_VALIDATE_INT);
+                break;
+            case 'tap':
+                $tap = filter_var($value, FILTER_VALIDATE_INT);
+                if (!isset($options['addbeer'])) {
+                    die("The --tap option can only be used in combination with the --addbeer option\n");
+                }
                 break;
             default:
                 die("Unknown option $option - see 'beer.php --help' for help on available options\n");
         }
     }
-} else {
-    $options = $_GET;
-}
-foreach ($options as $option => $value) {
-    switch ($option) {
-        case 'action':
-            $action = filter_var($value, FILTER_SANITIZE_STRING);
-            break;
-        case 'cardid':
-            $cardId = filter_var($value, FILTER_SANITIZE_STRING);
-            break;
-        case 'name':
-            $name = filter_var($value, FILTER_SANITIZE_STRING);
-            break;
-        case 'department':
-            $department = filter_var($value, FILTER_SANITIZE_STRING);
-            break;
-        case 'timestamp':
-            $timestamp = filter_var($value, FILTER_SANITIZE_NUMBER_INT);
-            break;
-        case 'secret':
-            $timestamp = filter_var($value, FILTER_SANITIZE_STRING);
-            break;
-        case 'tap':
-            $tap = filter_var($value, FILTER_VALIDATE_INT);
-            break;
-        case 'volume':
-            $volume = filter_var($value, FILTER_VALIDATE_INT);
-            break;
+
+    // Init database
+    $db = new Database();
+
+    switch ($action) {
         case 'addbeer':
+            if (isset($cardId)) {
+                $db->addBeer($cardId, $volume, $tap, $timestamp);
+            } else {
+                die("Cannot add beer without cardId\n");
+            }
+            break;
         case 'setuser':
-        case 'name':
-        case 'department':
+            if (isset($cardId)) {
+                $db->updateUser($cardId, $name, $department);
+            } else {
+                die("Cannot set properties for user without cardId\n");
+            }
+            break;
+        case 'beerlog':
+            print json_encode($db->getBeerLog(), JSON_PRETTY_PRINT);
+            break;
+        case 'topusers':
+            print json_encode($db->getTopUsers(), JSON_PRETTY_PRINT);
+            break;
+        case 'clear-beers':
+            $db->clearBeers();
+            break;
+        case 'clear-all':
+            $db->clearAll();
             break;
         default:
-            LogM("Ignoring unhandled option $option");
-    }
-}
+            print json_encode($db->getTopUsers(), JSON_PRETTY_PRINT);
 
-$db = new Database();
-
-switch ($action) {
-    case 'addbeer':
-        if (isset($cardId)) {
-            $db->addBeer($cardId, $volume, $tap, $timestamp);
-        } else {
-            die("Cannot add beer without cardId\n");
-        }
-        break;
-    case 'setuser':
-        if (isset($cardId)) {
-            $db->updateUser($cardId, $name, $department);
-        } else {
-            die("Cannot set properties for user without cardId\n");
-        }
-        break;
-    case 'showall':
-    default:
-        //print json_encode($db->getTopUsers(), JSON_PRETTY_PRINT);
-        print json_encode($db->getBeerLog(), JSON_PRETTY_PRINT);
-        print_r($db->getBeerLog());
+        //print_r($db->getBeerLog());
         //print json_encode($db->getUser("0x0004"), JSON_PRETTY_PRINT);
+    }
 }
 
 class User {
@@ -227,7 +225,11 @@ class Database {
         print $this->getSchema(true);
     }
 
-    public function getBeerLog(int $iNum = DATABASE_DEFAULT_LIMIT): array {
+    public function getBeerLog(?int $iNum): array {
+        if(!is_int($iNum)) {
+            $iNum = DATABASE_DEFAULT_LIMIT;
+        }
+        
         $aBeers = [];
         try {
             logM("Getting list of last $iNum beers tapped");
@@ -251,7 +253,11 @@ class Database {
         return $aBeers;
     }
 
-    public function getTopUsers(int $iNum = DATABASE_DEFAULT_LIMIT): array {
+    public function getTopUsers(?int $iNum): array {
+        if(!is_int($iNum)) {
+            $iNum = DATABASE_DEFAULT_LIMIT;
+        }
+        
         $aUsers = [];
         try {
             logM("Adding beer to log");
@@ -273,14 +279,18 @@ class Database {
         return $aUsers;
     }
 
-    public function addBeer(string $sCardId, ?int $iVolume = DEFAULT_BEER_VOLUME, ?int $iTap = DEFAULT_BEER_TAP, ?int $iTimestamp = null) {
-        $iUserId = null;
-        if ($iVolume === null) {
+    public function addBeer(string $sCardId, ?int $iVolume, ?int $iTap, ?int $iTimestamp): bool {
+        if(!is_int($iVolume)) {
             $iVolume = DEFAULT_BEER_VOLUME;
         }
-        if ($iTap === null) {
-            $iTap = 0;
+        if(!is_int($iTap)) {
+            $iTap = DEFAULT_BEER_TAP;
         }
+        if(!is_int($iTimestamp)) {
+            $iTimestamp = null;
+        }
+        
+        $iUserId = null;
 
         // Query if card is already registered
         try {
@@ -319,6 +329,7 @@ class Database {
         } catch (Exception $e) {
             die("Died inserting new row in Beer table: " . $e->getMessage());
         }
+        return true;
     }
 
     public function removeBeer(int $iBeerId): bool {
@@ -407,24 +418,19 @@ class Database {
             die("Died fetching beers for cardId=$sCardId: " . $ex->getMessage());
         }
 
-
-
         return new ExtendedUser($sCardId, $iUserId, $sName, $sDepartment, $aBeers);
     }
 
     public static function getSchema(bool $bDrop = true): string {
-        $sSchema = "";
+        $sSchema = "### Run as root ###\n";
 
         if ($bDrop) {
             $sSchema .= "DROP DATABASE IF EXISTS " . DATABASE_NAME . ";
         \n";
         }
 
-        $sSchema .= "### Run as root ###\n"
-                . "CREATE DATABASE IF NOT EXISTS " . DATABASE_NAME . ";\n"
+        $sSchema .= "CREATE DATABASE IF NOT EXISTS " . DATABASE_NAME . ";\n"
                 . "USE " . DATABASE_NAME . ";\n"
-                . "GRANT ALL ON " . DATABASE_NAME . ".* TO '" . DATABASE_USER . "'@'%' IDENTIFIED BY '" . DATABASE_PASS . "';\n"
-                . "FLUSH PRIVILEGES;\n\n"
                 . "### users table ###\n"
                 . "CREATE TABLE IF NOT EXISTS users (\n"
                 . "  id INT NOT NULL AUTO_INCREMENT,\n"
@@ -444,12 +450,32 @@ class Database {
                 . "  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n"
                 . "  PRIMARY KEY(id),\n"
                 . "  FOREIGN KEY(userId) REFERENCES users (id) ON UPDATE CASCADE ON DELETE CASCADE"
-                . ");\n\n";
+                . ");\n\n"
+                . "### create users ###\n"
+                . "GRANT ALL ON " . DATABASE_NAME . ".* TO '" . DATABASE_USER . "'@'%' IDENTIFIED BY '" . DATABASE_PASS . "';\n"
+                . "FLUSH PRIVILEGES;\n\n";
+        
+        
         return $sSchema;
     }
 
     public static function clearBeers(): void {
-        $sSql = "DELETE FROM beers";
+        $num = $this->dbh->exec("DELETE FROM beers");
+        if ($num === false) {
+            die("Could not clear beers from database\n");
+        } else {
+            logM("Delete $num beers from database");
+        }
+    }
+
+    public static function clearAll(): void {
+        clearBeers();
+        $num = $this->dbh->exec("DELETE FROM users");
+        if ($num === false) {
+            die("Could not clear users from database\n");
+        } else {
+            logM("Delete $num users from database");
+        }
     }
 
 }
@@ -460,15 +486,18 @@ class Database {
  * @return void
  */
 function logM(string $sMessage): void {
-    $sDate = date('Y-m-d H:i:s');
-    print "$sDate: $sMessage\n";
+    global $verbose;
+    if ($verbose) {
+        $sDate = date('Y-m-d H:i:s');
+        print "$sDate: $sMessage\n";
+    }
 }
 
 /**
- * Is this script initiated from CLI or HTML request?
- * @return bool
+ * 
+ * @return type
  */
-function isCli(): bool {
+function isCli() {
     return php_sapi_name() === 'cli';
 }
 
@@ -490,12 +519,14 @@ function getRemoteAddr(): string {
 function showHelpAndExit() {
     print "Usage: beers.php <options>\n"
             . "  --addbeer <cardid>          Add a beer to the user identified by <cardid>\n"
+            . "    --tap                     Set tap number - default is " . DEFAULT_BEER_TAP . "\n"
             . "    --timestamp               Optional timestamp (epoch) - if not set current time will be used\n"
             . "  --setuser <cardid>          Change user properties\n"
             . "    --name <name>             Set/change user name - use quotes to include spaces\n"
             . "    --departmemt <department> Set/change user department\n"
             . "  --clearbeers                Clear all beers from database - but retain users\n"
             . "  --clearall                  Clear entire database\n"
+            . "  --showall                   Show all data\n"
             . "  --schema                    Print database schema\n"
             . "  --verbose                   Log whats's being done to stderr\n"
             . "  -h|--help                   This help message\n";
