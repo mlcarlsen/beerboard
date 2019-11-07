@@ -17,21 +17,21 @@ const WS_AUTH_HOSTS = ['127.0.0.1', 'localhost'];
 const DEFAULT_BEER_VOLUME = 500; // Volume in milliliters
 const DEFAULT_BEER_TAP = 0;
 
-$action = "showall";
-$cardId = null;
-$timestamp = null;
-$userId = null;
-$name = null;
-$department = null;
-$secret = null;
-$verbose = false;
-$tap = DEFAULT_BEER_TAP;
-$volume = DEFAULT_BEER_VOLUME;
+$sAction = "showall";
+$sCardId = null;
+$iTimestamp = null;
+$sUserId = null;
+$sName = null;
+$sDepartment = null;
+$sSecret = null;
+$bVerbose = false;
+$iTap = DEFAULT_BEER_TAP;
+$iVolume = DEFAULT_BEER_VOLUME;
 
 if (isCli()) {
-    $options = getopt("hv", ['verbose', 'addbeer:', 'timestamp', 'setuser:', 'volume:', 'tap:', 'schema', 'topusers', 'beerlog', 'showallbeers', 'clearbeers', 'clearall', 'name:', 'department:', 'help']);
-    foreach ($options as $option => $value) {
-        switch ($option) {
+    $aOptions = getopt("hv", ['verbose', 'addbeer:', 'timestamp', 'setuser:', 'volume:', 'tap:', 'schema', 'topusers', 'beerlog', 'clearbeers', 'clearall', 'name:', 'department:', 'help']);
+    foreach ($aOptions as $sOption => $sValue) {
+        switch ($sOption) {
             case 'h':
             case 'help':
                 showHelpAndExit();
@@ -41,95 +41,99 @@ if (isCli()) {
                 exit(0);
                 break;
             case 'addbeer':
-                $action = 'addbeer';
-                $cardId = filter_var($value, FILTER_SANITIZE_STRING);
+                $sAction = 'addbeer';
+                $sCardId = filter_var($sValue, FILTER_SANITIZE_STRING);
                 break;
             case 'setuser':
-                $action = 'setuser';
-                $cardId = filter_var($value, FILTER_SANITIZE_STRING);
-                if (!isset($options['name']) && !isset($options['department'])) {
+                $sAction = 'setuser';
+                $sCardId = filter_var($sValue, FILTER_SANITIZE_STRING);
+                if (!isset($aOptions['name']) && !isset($aOptions['department'])) {
                     die("The --setuser option needs to be combined with at least one of --name or --department\n");
                 }
                 break;
             case 'clearall':
-                $action = 'clearall';
+                $sAction = 'clearall';
                 break;
             case 'clearbeers':
-                $action = 'clearbeers';
+                $sAction = 'clearbeers';
                 break;
             case 'verbose':
-                $verbose = true;
+                $bVerbose = true;
                 break;
             case 'name':
-                $name = filter_var($value, FILTER_SANITIZE_STRING);
-                if (!isset($options['setuser'])) {
+                $sName = filter_var($sValue, FILTER_SANITIZE_STRING);
+                if (!isset($aOptions['setuser'])) {
                     die("The --name option can only be used in combination with the --setuser option\n");
                 }
                 break;
             case 'department':
-                $department = filter_var($value, FILTER_SANITIZE_STRING);
-                if (!isset($options['setuser'])) {
+                $sDepartment = filter_var($sValue, FILTER_SANITIZE_STRING);
+                if (!isset($aOptions['setuser'])) {
                     die("The --department option can only be used in combination with the --setuser option\n");
                 }
                 break;
             case 'beerlog':
-                $action = 'beerlog';
+                $sAction = 'beerlog';
                 break;
             case 'topusers':
-                $action = 'topusers';
+                $sAction = 'topusers';
                 break;
             case 'timestamp':
-                $timestamp = filter_var($value, FILTER_VALIDATE_INT);
+                $iTimestamp = filter_var($sValue, FILTER_VALIDATE_INT);
                 break;
             case 'tap':
-                $tap = filter_var($value, FILTER_VALIDATE_INT);
-                if (!isset($options['addbeer'])) {
+                $iTap = filter_var($sValue, FILTER_VALIDATE_INT);
+                if (!isset($aOptions['addbeer'])) {
                     die("The --tap option can only be used in combination with the --addbeer option\n");
                 }
                 break;
+            case 'volume':
+                $iVolume = filter_var($sValue, FILTER_VALIDATE_INT);
+                break;
             default:
-                die("Unknown option $option - see 'beer.php --help' for help on available options\n");
+                die("Unknown option $sOption - see 'beer.php --help' for help on available options\n");
         }
     }
 
     // Init database
-    $db = new Database();
+    $oDb = new Database();
 
-    switch ($action) {
+    switch ($sAction) {
         case 'addbeer':
-            if (isset($cardId)) {
-                $db->addBeer($cardId, $volume, $tap, $timestamp);
+            if (isset($sCardId)) {
+                $oDb->addBeer($sCardId, $iVolume, $iTap, $iTimestamp);
             } else {
                 die("Cannot add beer without cardId\n");
             }
             break;
         case 'setuser':
-            if (isset($cardId)) {
-                $db->updateUser($cardId, $name, $department);
+            if (isset($sCardId)) {
+                $oDb->updateUser($sCardId, $sName, $sDepartment);
             } else {
                 die("Cannot set properties for user without cardId\n");
             }
             break;
         case 'beerlog':
-            print json_encode($db->getBeerLog(), JSON_PRETTY_PRINT);
+            print json_encode($oDb->getBeerLog(), JSON_PRETTY_PRINT);
             break;
         case 'topusers':
-            print json_encode($db->getTopUsers(), JSON_PRETTY_PRINT);
+            print json_encode($oDb->getTopUsers(20), JSON_PRETTY_PRINT);
             break;
         case 'clear-beers':
-            $db->clearBeers();
+            $oDb->clearBeers();
             break;
         case 'clear-all':
-            $db->clearAll();
+            $oDb->clearAll();
             break;
         default:
-            print json_encode($db->getTopUsers(), JSON_PRETTY_PRINT);
-
-        //print_r($db->getBeerLog());
-        //print json_encode($db->getUser("0x0004"), JSON_PRETTY_PRINT);
+            print json_encode($oDb->getTopUsers(20), JSON_PRETTY_PRINT);
+            print json_encode($oDb->getBeerLog(20), JSON_PRETTY_PRINT);
     }
 }
 
+/**
+ * No Hungarian notation on member variable, so we can convert objets to JSON directly
+ */
 class User {
 
     public $numBeers;
@@ -138,12 +142,12 @@ class User {
     public $name;
     public $department;
 
-    public function __construct(string $cardId, int $id = null, string $name = null, string $department = null, int $numBeers) {
-        $this->cardId = $cardId;
-        $this->id = $id;
-        $this->name = $name;
-        $this->department = $department;
-        $this->numBeers = $numBeers;
+    public function __construct(string $sCardId, ?int $iId, ?string $sName = null, ?string $sDepartment, ?int $iNumBeers) {
+        $this->cardId = $sCardId;
+        $this->id = $iId;
+        $this->Name = $sName;
+        $this->department = $sDepartment;
+        $this->numBeers = $iNumBeers;
     }
 
 }
@@ -152,8 +156,8 @@ class ExtendedUser extends User {
 
     public $beers = [];
 
-    public function __construct(string $cardId, int $userId, string $userName, string $userDepartment, array $beers) {
-        parent::__construct($cardId, $userId, $userName, $userDepartment, sizeof($beers));
+    public function __construct(string $sCardId, int $iId, string $sName, string $sDepartment, array $beers) {
+        parent::__construct($sCardId, $iId, $sName, $sDepartment, sizeof($beers));
         $this->beers = $beers;
     }
 
@@ -167,23 +171,23 @@ class Beer {
     public $volume;
     public $timestamp;
 
-    public function __construct(int $id, int $userId, int $tap, int $volume, ?int $timestamp = null) {
-        $this->id = $id;
-        $this->userId = $userId;
-        $this->tap = $tap;
-        $this->volume = $volume;
-        if (isset($timestamp)) {
-            $this->timestamp = $timestamp;
+    public function __construct(int $iId, int $iUserId, int $iTap, int $iVolume, ?int $iTimestamp = null) {
+        $this->id = $iId;
+        $this->userId = $iUserId;
+        $this->tap = $iTap;
+        $this->volume = $iVolume;
+        if (isset($iTimestamp)) {
+            $this->timestamp = $iTimestamp;
         } else {
             $this->timestamp = time();
         }
     }
 
     public function getFormattedTimestamp(string $sFormatToday = 'h:m:s', string $sFormatOlder = 'd/m h:m:s'): string {
-        if (date('YMd', $this->iTimestamp) === date('YMd')) {
-            return date($sFormatToday, $this->iTimestamp);
+        if (date('YMd', $this->timestamp) === date('YMd')) {
+            return date($sFormatToday, $this->timestamp);
         } else {
-            return date($sFormatOlder, $this->iTimestamp);
+            return date($sFormatOlder, $this->timestamp);
         }
     }
 
@@ -195,14 +199,14 @@ class ExtendedBeer extends Beer {
     private $userName = "";
     private $userDepartment = "";
 
-    public function __construct(int $beerId, int $userId, int $tap, int $volume, string $cardId, ?string $userName, ?string $userDepartment, ?int $timestamp = null) {
-        parent::__construct($beerId, $userId, $tap, $volume, $timestamp);
-        $this->cardId = $cardId;
-        if (isset($userName)) {
-            $this->userName = $userName;
+    public function __construct(int $iBeerId, int $iUserId, int $tap, int $iVolume, string $sCardId, ?string $sUserName, ?string $sUserDepartment, ?int $iTimestamp = null) {
+        parent::__construct($iBeerId, $iUserId, $tap, $iVolume, $iTimestamp);
+        $this->cardId = $sCardId;
+        if (isset($sUserName)) {
+            $this->userName = $sUserName;
         }
-        if (isset($userDepartment)) {
-            $this->userDepartment = $userDepartment;
+        if (isset($sUserDepartment)) {
+            $this->userDepartment = $sUserDepartment;
         }
     }
 
@@ -210,19 +214,15 @@ class ExtendedBeer extends Beer {
 
 class Database {
 
-    private $dbh;
+    private $oDb;
 
     public function __construct() {
         try {
-            $this->dbh = new PDO('mysql:host=' . DATABASE_HOST . ';dbname=' . DATABASE_NAME, DATABASE_USER, DATABASE_PASS);
-            $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->oDb = new PDO('mysql:host=' . DATABASE_HOST . ';dbname=' . DATABASE_NAME, DATABASE_USER, DATABASE_PASS);
+            $this->oDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             die("Error connecting to database: " . $e->getMessage());
         }
-    }
-
-    public function init(): void {
-        print $this->getSchema(true);
     }
 
     public function getBeerLog(?int $iNum): array {
@@ -233,7 +233,7 @@ class Database {
         $aBeers = [];
         try {
             logM("Getting list of last $iNum beers tapped");
-            $stmt = $this->dbh->prepare('SELECT b.id, b.tap, b.volume, u.id AS userId, UNIX_TIMESTAMP(b.timestamp) AS timestamp, u.cardId, u.name, u.department FROM beers b JOIN users u ON b.userId=u.id ORDER BY b.timestamp DESC LIMIT ?');
+            $stmt = $this->oDb->prepare('SELECT b.id, b.tap, b.volume, u.id AS userId, UNIX_TIMESTAMP(b.timestamp) AS timestamp, u.cardId, u.name, u.department FROM beers b JOIN users u ON b.userId=u.id ORDER BY b.timestamp DESC LIMIT ?');
             $stmt->bindParam(1, $iNum, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iBeerId, PDO::PARAM_INT);
@@ -261,7 +261,7 @@ class Database {
         $aUsers = [];
         try {
             logM("Adding beer to log");
-            $stmt = $this->dbh->prepare('SELECT u.id, u.cardId, u.name, u.department, count(*) AS numBeers FROM beers b JOIN users u ON b.userId=u.id GROUP BY u.id, u.cardId, u.name, u.department ORDER BY numBeers DESC LIMIT ?');
+            $stmt = $this->oDb->prepare('SELECT u.id, u.cardId, u.name, u.department, count(*) AS numBeers FROM beers b JOIN users u ON b.userId=u.id GROUP BY u.id, u.cardId, u.name, u.department ORDER BY numBeers DESC LIMIT ?');
             $stmt->bindParam(1, $iNum, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iUserId, PDO::PARAM_INT);
@@ -295,7 +295,7 @@ class Database {
         // Query if card is already registered
         try {
             logM("Quering existing user");
-            $stmt = $this->dbh->prepare('SELECT id FROM users WHERE cardId=?');
+            $stmt = $this->oDb->prepare('SELECT id FROM users WHERE cardId=?');
             $stmt->bindParam(1, $sCardId, PDO::PARAM_STR);
             $stmt->execute();
             $stmt->bindColumn('id', $iUserId, PDO::PARAM_INT);
@@ -308,10 +308,10 @@ class Database {
         if (!isset($iUserId)) {
             try {
                 logM("Adding new user (volume = $iVolume, tap = $iTap)");
-                $stmt = $this->dbh->prepare('INSERT INTO users (cardId) VALUES (?)');
+                $stmt = $this->oDb->prepare('INSERT INTO users (cardId) VALUES (?)');
                 $stmt->bindParam(1, $sCardId, PDO::PARAM_STR);
                 $stmt->execute();
-                $iUserId = $this->dbh->lastInsertId();
+                $iUserId = $this->oDb->lastInsertId();
             } catch (Exception $e) {
                 die("Died inserting card id: " . $sCardId . ": " . $e->getMessage());
             }
@@ -320,7 +320,7 @@ class Database {
         // Using the ID obtained above insert a new beer into the log
         try {
             logM("Adding beer to log");
-            $stmt = $this->dbh->prepare('INSERT INTO beers (userId, volume, tap, timestamp) VALUES (?,?,?,?)');
+            $stmt = $this->oDb->prepare('INSERT INTO beers (userId, volume, tap, timestamp) VALUES (?,?,?,?)');
             $stmt->bindParam(1, $iUserId, PDO::PARAM_INT);
             $stmt->bindParam(2, $iVolume, PDO::PARAM_INT);
             $stmt->bindParam(3, $iTap, PDO::PARAM_INT);
@@ -335,7 +335,7 @@ class Database {
     public function removeBeer(int $iBeerId): bool {
         try {
             logM("Removing beer from log");
-            $stmt = $this->dbh->prepare('DELETE FROM Beers WHERE beerId=?');
+            $stmt = $this->oDb->prepare('DELETE FROM Beers WHERE beerId=?');
             $stmt->bindParam(1, $iBeerId, PDO::PARAM_INT);
             $stmt->execute();
         } catch (Exception $e) {
@@ -365,7 +365,7 @@ class Database {
 
         try {
             logM("Updating user with cardId = $sCardId");
-            $stmt = $this->dbh->prepare($sSql);
+            $stmt = $this->oDb->prepare($sSql);
             if (isset($sName) && isset($sDepartment)) {
                 $stmt->bindParam(1, $sName, PDO::PARAM_STR);
                 $stmt->bindParam(2, $sDepartment, PDO::PARAM_STR);
@@ -384,11 +384,11 @@ class Database {
         return true;
     }
 
-    public function getUser(string $sCardId): ExtendedUser {
+    public function getUser(string $sCardId): ?ExtendedUser {
         $iUserId = null;
         try {
             logM("Fetching user information for cardId=$sCardId");
-            $stmt = $this->dbh->prepare('SELECT id, name, department, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(updated) AS updated FROM users WHERE cardId=?');
+            $stmt = $this->oDb->prepare('SELECT id, name, department, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(updated) AS updated FROM users WHERE cardId=?');
             $stmt->bindParam(1, $sCardId, PDO::PARAM_STR);
             $stmt->execute();
             $stmt->bindColumn('id', $iUserId, PDO::PARAM_INT);
@@ -404,7 +404,7 @@ class Database {
         $aBeers = [];
         try {
             logM("Fetching beer information for userId=$iUserId");
-            $stmt = $this->dbh->prepare('SELECT id, tap, volume, UNIX_TIMESTAMP(timestamp) AS timestamp FROM beers WHERE userId=?');
+            $stmt = $this->oDb->prepare('SELECT id, tap, volume, UNIX_TIMESTAMP(timestamp) AS timestamp FROM beers WHERE userId=?');
             $stmt->bindParam(1, $iUserId, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iId, PDO::PARAM_INT);
@@ -460,7 +460,7 @@ class Database {
     }
 
     public static function clearBeers(): void {
-        $num = $this->dbh->exec("DELETE FROM beers");
+        $num = $this->oDb->exec("DELETE FROM beers");
         if ($num === false) {
             die("Could not clear beers from database\n");
         } else {
@@ -470,7 +470,7 @@ class Database {
 
     public static function clearAll(): void {
         clearBeers();
-        $num = $this->dbh->exec("DELETE FROM users");
+        $num = $this->oDb->exec("DELETE FROM users");
         if ($num === false) {
             die("Could not clear users from database\n");
         } else {
@@ -486,8 +486,8 @@ class Database {
  * @return void
  */
 function logM(string $sMessage): void {
-    global $verbose;
-    if ($verbose) {
+    global $bVerbose;
+    if ($bVerbose && isCli()) {
         $sDate = date('Y-m-d H:i:s');
         print "$sDate: $sMessage\n";
     }

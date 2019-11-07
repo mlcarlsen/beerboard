@@ -5,84 +5,117 @@ declare(strict_types=1);
 require_once('beer.php');
 header('Content-type: application/json');
 
-$db = new Database();
+// Init DB
+$oDb = new Database();
 
-$method = filter_input(INPUT_SERVER, 'REQUEST_METHOD');
+// Get request method
+$sMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD');
 
-if ($method === 'GET') {
-    $action = filter_input(INPUT_GET, 'action', FILTER_SANITIZE_STRING);
-
-    switch ($action) {
+// Handle action for GET and POST requests
+if ($sMethod === 'GET') {
+    $sAction = filter_input(INPUT_GET, 'action', FILTER_SANITIZE_STRING);
+    switch ($sAction) {
         case 'beerlog':
-            $num = filter_input(INPUT_GET, 'num', FILTER_VALIDATE_INT);
-            if ($num === false) {
-                print json_encode(['success' => 0, 'message' => "Num must be specified as an integer"], JSON_PRETTY_PRINT);
+            $iNum = filter_input(INPUT_GET, 'num', FILTER_VALIDATE_INT);
+            if ($iNum === false) {
+                sendJsonStatusResponse(false, 'Num must be specified as an integer');
             } else {
-                print json_encode($db->getBeerLog($num), JSON_PRETTY_PRINT);
+                $aBeers = $oDb->getBeerLog($iNum);
+                if ($aBeers === null) {
+                    sendJsonStatusResponse(false, 'Could not fetch beer log');
+                } else {
+                    sendJsonResponse($aBeers);
+                }
             }
             break;
         case 'topusers':
-            $num = filter_input(INPUT_GET, 'num', FILTER_VALIDATE_INT);
-            if ($num === false) {
-                print json_encode(['success' => 0, 'message' => "Num must be specified as an integer"], JSON_PRETTY_PRINT);
+            $iNum = filter_input(INPUT_GET, 'num', FILTER_VALIDATE_INT);
+            if ($iNum === false) {
+                sendJsonStatusResponse(false, 'Num must be specified as an integer');
             } else {
-                print json_encode($db->getTopUsers($num), JSON_PRETTY_PRINT);
+                $aUsers = $oDb->getTopUsers($iNum);
+                if ($aUsers === null) {
+                    sendJsonStatusResponse(false, 'Could not get list of users');
+                } else {
+                    sendJsonResponse($aUsers);
+                }
             }
             break;
         case 'getuser':
-            $cardId = filter_input(INPUT_GET, 'cardid');
-            if($cardId === null || $cardId === false) {
-                print json_encode(['success' => 0, 'message' => "Must provide cardid param"], JSON_PRETTY_PRINT);
+            $sCardId = filter_input(INPUT_GET, 'cardid');
+            if ($sCardId === null || $sCardId === false) {
+                sendJsonStatusResponse(false, 'Must provide cardid param');
             } else {
-                print json_encode($db->getUser($cardId), JSON_PRETTY_PRINT);
+                $oUser = $oDb->getUser($sCardId);
+                if ($oUser === null) {
+                    sendJsonStatusResponse(false, "Could not find user with cardId '$sCardId'");
+                } else {
+                    sendJsonResponse($oUser);
+                }
             }
             break;
         default:
-            print json_encode(['success' => 0, 'message' => "Unknown action '$action'"], JSON_PRETTY_PRINT);
+            sendJsonResponse(false, "Unknown action '$sAction'");
     }
-} else if($method === 'POST') {
-    $action = filter_input(INPUT_POST, 'action', FILTER_SANITIZE_STRING);
-    switch($action) {
+} else if ($sMethod === 'POST') {
+    $sAction = filter_input(INPUT_POST, 'action', FILTER_SANITIZE_STRING);
+    switch ($sAction) {
         case 'addbeer':
-            $cardId = filter_input(INPUT_POST, 'cardid', FILTER_SANITIZE_STRING);
-            if($cardId === null ||  $cardId === false) {
-                print json_encode(['success' => 0, 'message' => "Must provide cardid param"], JSON_PRETTY_PRINT);
-            }
-            $volume = filter_input(INPUT_POST, 'volume', FILTER_VALIDATE_INT);
-            if($volume === false) {
-                print json_encode(['success' => 0, 'message' => "Volume must be specified as an integer (ml)"], JSON_PRETTY_PRINT);
-            }
-            $tap = filter_input(INPUT_POST, 'tap', FILTER_VALIDATE_INT);
-            if($tap === false) {
-                print json_encode(['success' => 0, 'message' => "Tap must be specified as an integer"], JSON_PRETTY_PRINT);
-            }
-            $timestamp = filter_input(INPUT_POST, 'timestamp', FILTER_VALIDATE_INT);
-            if($timestamp === false) {
-                print json_encode(['success' => 0, 'message' => "Timestamp must be specified as an integer (UNIX epoch)"], JSON_PRETTY_PRINT);
-            }
-            if($db->addBeer($cardId, $volume, $tap, $timestamp)) {
-                print json_encode(['success' => 1, 'message' => 'Added beer'], JSON_PRETTY_PRINT);
+            $sCardId = filter_input(INPUT_POST, 'cardid', FILTER_SANITIZE_STRING);
+            $iVolume = filter_input(INPUT_POST, 'volume', FILTER_VALIDATE_INT);
+            $iTap = filter_input(INPUT_POST, 'tap', FILTER_VALIDATE_INT);
+            $iTimestamp = filter_input(INPUT_POST, 'timestamp', FILTER_VALIDATE_INT);
+            if ($sCardId === null || $sCardId === false) {
+                sendJsonStatusResponse(false, 'Must provide cardid param');
+            } else if ($iVolume === false) {
+                sendJsonStatusResponse(false, 'Volume must be specified as an integer (ml)');
+            } else if ($iTap === false) {
+                sendJsonStatusResponse(false, "Tap id must be specified as an integer");
+            } else if ($iTimestamp === false) {
+                sendJsonStatusResponse(false, 'Timestamp must be specified as an integer (UNIX epoch)');
+            } else if ($oDb->addBeer($sCardId, $iVolume, $iTap, $iTimestamp)) {
+                sendJsonStatusResponse(true, 'Added beer');
             } else {
-                print json_encode(['success' => 0, 'message' => 'Failed adding beer'], JSON_PRETTY_PRINT);
+                sendJsonStatusResponse(false, 'Could not add beer');
             }
             break;
         case 'updateUser':
-            $cardId = filter_input(INPUT_POST, 'cardid', FILTER_SANITIZE_STRING);
-            $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
-            $department = filter_input(INPUT_POST, 'department', FILTER_SANITIZE_STRING);
-            if($db->updateUser($cardId, $name, $department)) {
-                print json_encode(['success' => 1, 'message' => 'Updated user'], JSON_PRETTY_PRINT);
+            $sCardId = filter_input(INPUT_POST, 'cardid', FILTER_SANITIZE_STRING);
+            $sName = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+            $sDepartment = filter_input(INPUT_POST, 'department', FILTER_SANITIZE_STRING);
+            if ($oDb->updateUser($sCardId, $sName, $sDepartment)) {
+                sendJsonStatusResponse(true, 'Updated user');
             } else {
-                print json_encode(['success' => 0, 'message' => 'Could not update user'], JSON_PRETTY_PRINT);
+                sendJsonStatusResponse(false, 'Could not update user');
             }
             break;
         case '':
-            print json_encode(['success' => 0, 'message' => "Action is empty"], JSON_PRETTY_PRINT);
+            sendJsonStatusResponse(false, 'Action is empty');
             break;
         default:
-            print json_encode(['success' => 0, 'message' => "Unknown action '$action'"], JSON_PRETTY_PRINT);
+            sendJsonStatusResponse(false, "Unknown action '$sAction'");
     }
+} else {
+    sendJsonStatusResponse(false, "Method '$sMethod' is not available");
 }
-            
 
+/**
+ * Send status encoded as JSON
+ * @param bool $bSuccess
+ * @param string $sMessage
+ * @return void
+ */
+function sendJsonStatusResponse(bool $bSuccess, string $sMessage): void {
+    sendJsonResponse(['success' => ($bSuccess ? 1 : 0), 'message' => $sMessage]);
+    return;
+}
 
+/**
+ * Send requested result as JSON encoded string
+ * @param type $oResponse
+ * @return void
+ */
+function sendJsonResponse($oResponse): void {
+    print json_encode($oResponse, JSON_PRETTY_PRINT);
+    return;
+}
