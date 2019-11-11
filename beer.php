@@ -27,22 +27,50 @@ $sSecret = null;
 $bVerbose = false;
 $iTap = DEFAULT_BEER_TAP;
 $iVolume = DEFAULT_BEER_VOLUME;
+$iNum = DATABASE_DEFAULT_LIMIT;
 
 if (isCli()) {
     $aOptions = getopt("hv", ['verbose', 'addbeer:', 'timestamp', 'setuser:', 'volume:', 'tap:', 'schema', 'topusers', 'beerlog', 'clearbeers', 'clearall', 'name:', 'department:', 'help']);
     foreach ($aOptions as $sOption => $sValue) {
         switch ($sOption) {
+            case 'addbeer':
+                $sAction = 'addbeer';
+                $sCardId = filter_var($sValue, FILTER_SANITIZE_STRING);
+                break;
+            case 'beerlog':
+                $sAction = 'beerlog';
+                break;
+            case 'clearall':
+                $sAction = 'clearall';
+                break;
+            case 'clearbeers':
+                $sAction = 'clearbeers';
+                break;
+            case 'department':
+                $sDepartment = filter_var($sValue, FILTER_SANITIZE_STRING);
+                if (!isset($aOptions['setuser'])) {
+                    die("The --department option can only be used in combination with the --setuser option\n");
+                }
+                break;
             case 'h':
             case 'help':
                 showHelpAndExit();
                 break;
+            case 'name':
+                $sName = filter_var($sValue, FILTER_SANITIZE_STRING);
+                if (!isset($aOptions['setuser'])) {
+                    die("The --name option can only be used in combination with the --setuser option\n");
+                }
+                break;
+            case 'num':
+                $iNum = filter_var($sValue, FILTER_VALIDATE_INT);
+                if(!isset($aOptions['beerlog']) && !isset($aOptions['topusers'])) {
+                    die("The --num option can only be used in combination with the --beerlog or --topusers option\n");
+                }
+                break;
             case 'schema':
                 print Database::getSchema();
                 exit(0);
-                break;
-            case 'addbeer':
-                $sAction = 'addbeer';
-                $sCardId = filter_var($sValue, FILTER_SANITIZE_STRING);
                 break;
             case 'setuser':
                 $sAction = 'setuser';
@@ -51,41 +79,20 @@ if (isCli()) {
                     die("The --setuser option needs to be combined with at least one of --name or --department\n");
                 }
                 break;
-            case 'clearall':
-                $sAction = 'clearall';
-                break;
-            case 'clearbeers':
-                $sAction = 'clearbeers';
-                break;
-            case 'verbose':
-                $bVerbose = true;
-                break;
-            case 'name':
-                $sName = filter_var($sValue, FILTER_SANITIZE_STRING);
-                if (!isset($aOptions['setuser'])) {
-                    die("The --name option can only be used in combination with the --setuser option\n");
-                }
-                break;
-            case 'department':
-                $sDepartment = filter_var($sValue, FILTER_SANITIZE_STRING);
-                if (!isset($aOptions['setuser'])) {
-                    die("The --department option can only be used in combination with the --setuser option\n");
-                }
-                break;
-            case 'beerlog':
-                $sAction = 'beerlog';
-                break;
-            case 'topusers':
-                $sAction = 'topusers';
-                break;
-            case 'timestamp':
-                $iTimestamp = filter_var($sValue, FILTER_VALIDATE_INT);
-                break;
             case 'tap':
                 $iTap = filter_var($sValue, FILTER_VALIDATE_INT);
                 if (!isset($aOptions['addbeer'])) {
                     die("The --tap option can only be used in combination with the --addbeer option\n");
                 }
+                break;
+            case 'timestamp':
+                $iTimestamp = filter_var($sValue, FILTER_VALIDATE_INT);
+                break;
+            case 'topusers':
+                $sAction = 'topusers';
+                break;
+            case 'verbose':
+                $bVerbose = true;
                 break;
             case 'volume':
                 $iVolume = filter_var($sValue, FILTER_VALIDATE_INT);
@@ -106,6 +113,15 @@ if (isCli()) {
                 die("Cannot add beer without cardId\n");
             }
             break;
+        case 'beerlog':
+            print json_encode($oDb->getBeerLog($iNum), JSON_PRETTY_PRINT);
+            break;
+        case 'clear-all':
+            $oDb->clearAll();
+            break;
+        case 'clear-beers':
+            $oDb->clearBeers();
+            break;
         case 'setuser':
             if (isset($sCardId)) {
                 $oDb->updateUser($sCardId, $sName, $sDepartment);
@@ -113,21 +129,12 @@ if (isCli()) {
                 die("Cannot set properties for user without cardId\n");
             }
             break;
-        case 'beerlog':
-            print json_encode($oDb->getBeerLog(), JSON_PRETTY_PRINT);
-            break;
         case 'topusers':
-            print json_encode($oDb->getTopUsers(20), JSON_PRETTY_PRINT);
-            break;
-        case 'clear-beers':
-            $oDb->clearBeers();
-            break;
-        case 'clear-all':
-            $oDb->clearAll();
+            print json_encode($oDb->getTopUsers($iNum), JSON_PRETTY_PRINT);
             break;
         default:
-            print json_encode($oDb->getTopUsers(20), JSON_PRETTY_PRINT);
-            print json_encode($oDb->getBeerLog(20), JSON_PRETTY_PRINT);
+            print json_encode($oDb->getTopUsers($iNum), JSON_PRETTY_PRINT);
+            print json_encode($oDb->getBeerLog($iNum), JSON_PRETTY_PRINT);
     }
 }
 
@@ -141,13 +148,15 @@ class User {
     public $cardId;
     public $name;
     public $department;
+    public $totalVolume = 0;
 
-    public function __construct(string $sCardId, ?int $iId, ?string $sName = null, ?string $sDepartment, ?int $iNumBeers) {
+    public function __construct(string $sCardId, ?int $iId, ?string $sName, ?string $sDepartment, ?int $iNumBeers, ?int $iTotalVolume = null) {
         $this->cardId = $sCardId;
         $this->id = $iId;
-        $this->Name = $sName;
+        $this->name = $sName;
         $this->department = $sDepartment;
         $this->numBeers = $iNumBeers;
+        $this->totalVolume = $iTotalVolume;
     }
 
 }
@@ -159,6 +168,10 @@ class ExtendedUser extends User {
     public function __construct(string $sCardId, int $iId, string $sName, string $sDepartment, array $beers) {
         parent::__construct($sCardId, $iId, $sName, $sDepartment, sizeof($beers));
         $this->beers = $beers;
+        foreach($beers as $beer) {
+            $this->Totalvolume += $beer->volume;
+            print_r($beer);
+        }
     }
 
 }
@@ -195,9 +208,9 @@ class Beer {
 
 class ExtendedBeer extends Beer {
 
-    private $cardId;
-    private $userName = "";
-    private $userDepartment = "";
+    public $cardId;
+    public $userName = "N/A";
+    public $userDepartment = "N/A";
 
     public function __construct(int $iBeerId, int $iUserId, int $tap, int $iVolume, string $sCardId, ?string $sUserName, ?string $sUserDepartment, ?int $iTimestamp = null) {
         parent::__construct($iBeerId, $iUserId, $tap, $iVolume, $iTimestamp);
@@ -226,14 +239,14 @@ class Database {
     }
 
     public function getBeerLog(?int $iNum): array {
-        if(!is_int($iNum)) {
+        if (!is_int($iNum)) {
             $iNum = DATABASE_DEFAULT_LIMIT;
         }
-        
+
         $aBeers = [];
         try {
             logM("Getting list of last $iNum beers tapped");
-            $stmt = $this->oDb->prepare('SELECT b.id, b.tap, b.volume, u.id AS userId, UNIX_TIMESTAMP(b.timestamp) AS timestamp, u.cardId, u.name, u.department FROM beers b JOIN users u ON b.userId=u.id ORDER BY b.timestamp DESC LIMIT ?');
+            $stmt = $this->oDb->prepare('SELECT b.id, b.tap, b.volume, u.id AS userId, u.cardId, u.name, u.department, UNIX_TIMESTAMP(b.timestamp) AS timestamp FROM beers b JOIN users u ON b.userId=u.id ORDER BY b.timestamp DESC LIMIT ?');
             $stmt->bindParam(1, $iNum, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iBeerId, PDO::PARAM_INT);
@@ -254,14 +267,14 @@ class Database {
     }
 
     public function getTopUsers(?int $iNum): array {
-        if(!is_int($iNum)) {
+        if (!is_int($iNum)) {
             $iNum = DATABASE_DEFAULT_LIMIT;
         }
-        
+
         $aUsers = [];
         try {
             logM("Adding beer to log");
-            $stmt = $this->oDb->prepare('SELECT u.id, u.cardId, u.name, u.department, count(*) AS numBeers FROM beers b JOIN users u ON b.userId=u.id GROUP BY u.id, u.cardId, u.name, u.department ORDER BY numBeers DESC LIMIT ?');
+            $stmt = $this->oDb->prepare('SELECT u.id, u.cardId, u.name, u.department, count(*) AS numBeers, sum(b.volume) AS totalVolume FROM beers b JOIN users u ON b.userId=u.id GROUP BY u.id, u.cardId, u.name, u.department ORDER BY numBeers DESC LIMIT ?');
             $stmt->bindParam(1, $iNum, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iUserId, PDO::PARAM_INT);
@@ -269,9 +282,10 @@ class Database {
             $stmt->bindColumn('name', $sName, PDO::PARAM_STR);
             $stmt->bindColumn('department', $sDepartment, PDO::PARAM_STR);
             $stmt->bindColumn('numBeers', $iNumBeers, PDO::PARAM_INT);
+            $stmt->bindColumn('totalVolume', $iTotalVolume, PDO::PARAM_INT);
             while ($stmt->fetch(PDO::FETCH_BOUND)) {
                 //     public function __construct(string $sUserCardId, ?int $iUserId = null, ?string $sUserName = null, ?string $sUserDepartment = null, ?int $iNumBeers) {
-                $aUsers[] = new User($sCardId, $iUserId, $sName, $sDepartment, $iNumBeers);
+                $aUsers[] = new User($sCardId, $iUserId, $sName, $sDepartment, $iNumBeers, $iTotalVolume);
             }
         } catch (Exception $e) {
             die("Died inserting new row in 'beer' table: " . $e->getMessage());
@@ -280,16 +294,16 @@ class Database {
     }
 
     public function addBeer(string $sCardId, ?int $iVolume, ?int $iTap, ?int $iTimestamp): bool {
-        if(!is_int($iVolume)) {
+        if (!is_int($iVolume)) {
             $iVolume = DEFAULT_BEER_VOLUME;
         }
-        if(!is_int($iTap)) {
+        if (!is_int($iTap)) {
             $iTap = DEFAULT_BEER_TAP;
         }
-        if(!is_int($iTimestamp)) {
+        if (!is_int($iTimestamp)) {
             $iTimestamp = null;
         }
-        
+
         $iUserId = null;
 
         // Query if card is already registered
@@ -454,8 +468,8 @@ class Database {
                 . "### create users ###\n"
                 . "GRANT ALL ON " . DATABASE_NAME . ".* TO '" . DATABASE_USER . "'@'%' IDENTIFIED BY '" . DATABASE_PASS . "';\n"
                 . "FLUSH PRIVILEGES;\n\n";
-        
-        
+
+
         return $sSchema;
     }
 
