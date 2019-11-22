@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Users</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.6.1/css/buttons.dataTables.min.css">
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.3.1/css/select.dataTables.min.css">
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+        <script type="text/javascript" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/da.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+        <script type="text/javascript">
+            $(document).ready(function () {
+                $('#topusers').DataTable({
+                    "ordering": false,
+                    "searching": false,
+                    "bPaginate": false,
+                    "bInfo": false,
+                    ajax: {'url': "/beerService.php?action=topusers&num=25", "dataSrc": ""},
+                    'columns': [
+                        {"data": "cardId", fnCreatedCell: function (nTd, sData, oData, iRow, iCol) {
+                                $(nTd).html("<a href='/useredit.php?cardId=" + oData.cardId + "'>" + oData.cardId + "</a>");
+                            }},
+                        {"data": "name"},
+                        {"data": "department"},
+                        {"data": "totalVolume"},
+                        {"data": "numBeers"}
+                    ],
+                    'columnDefs': [
+                        {
+                            "targets": [0, 1, 2],
+                            "className": "dt-body-left dt-head-left",
+                        },
+                        {
+                            "targets": [3, 4],
+                            "className": "dt-body-right",
+                        }]
+                });
+            });
+
+            setInterval(function () {
+                $('#topusers').DataTable().ajax.reload();
+            }, 10000);
+        </script>
+        <style>
+            div.container {
+                width: 80%;
+            } 
+        </style>
+    </head>
+    <body>
+        <table id="navigator">
+            <tr>
+                <td><a href="home.html">Main</a></td>
+                <td><a href="log.html">Log</td>
+                <td>Users</td>
+                <td><a href="charts.html">Charts</a></td>
+            </tr>
+        </table>
+        <table id="topusers" class="display" style="width:50%">
+            <thead>
+                <tr>
+                    <th>Card id</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Volume</th>
+                    <th># beers</th>
+                </tr>
+            </thead>
+        </table>
+    </body>
+</html>

@@ -30,16 +30,19 @@ if ($sMethod === 'GET') {
             break;
         case 'topusers':
             $iNum = filter_input(INPUT_GET, 'num', FILTER_VALIDATE_INT);
+            $sOrderBy = filter_input(INPUT_GET, 'orderBy', FILTER_SANITIZE_STRING);
             if ($iNum === false) {
                 sendJsonStatusResponse(false, 'Num must be specified as an integer');
-            } else {
-                $aUsers = $oDb->getTopUsers($iNum);
-                if ($aUsers === null) {
-                    sendJsonStatusResponse(false, 'Could not get list of users');
-                } else {
-                    sendJsonResponse($aUsers);
-                }
+            } else if (isset($sOrderBy) && $sOrderBy !== 'volume' && $sOrderBy !== 'number') {
+                sendJsonStatusResponse(false, "'orderBy' must be either 'number' or 'volume'");
             }
+            $aUsers = $oDb->getTopUsers($iNum, $sOrderBy);
+            if ($aUsers === null) {
+                sendJsonStatusResponse(false, 'Could not get list of users');
+            } else {
+                sendJsonResponse($aUsers);
+            }
+
             break;
         case 'getuser':
             $sCardId = filter_input(INPUT_GET, 'cardid');
@@ -53,6 +56,10 @@ if ($sMethod === 'GET') {
                     sendJsonResponse($oUser);
                 }
             }
+            break;
+        case 'tapdistribution':
+            $aTapDistribution = $oDb->getTapDistribution();
+            sendJsonResponse($aTapDistribution);
             break;
         default:
             sendJsonResponse(false, "Unknown action '$sAction'");

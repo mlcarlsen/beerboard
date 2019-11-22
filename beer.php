@@ -225,6 +225,19 @@ class ExtendedBeer extends Beer {
 
 }
 
+class Tap {
+    public $tap;
+    public $numBeers;
+    public $totalVolume;
+    
+    public function __construct(int $iTap, int $iNumBeers, int $iTotalVolume) {
+        $this->tap = $iTap;
+        $this->numBeers = $iNumBeers;
+        $this->totalVolume = $iTotalVolume;
+    }
+            
+}
+
 class Database {
 
     private $oDb;
@@ -266,15 +279,21 @@ class Database {
         return $aBeers;
     }
 
-    public function getTopUsers(?int $iNum): array {
+    public function getTopUsers(?int $iNum, ?string $sOrderBy): array {
         if (!is_int($iNum)) {
             $iNum = DATABASE_DEFAULT_LIMIT;
         }
+        if (!isset($sOrderBy) || $sOrderBy === 'number') {
+            $sOrderBy = 'numBeers';
+        } else if($sOrderBy === 'volume') {
+            $sOrderBy = 'totalVolume';
+        }
+        
 
         $aUsers = [];
         try {
             logM("Adding beer to log");
-            $stmt = $this->oDb->prepare('SELECT u.id, u.cardId, u.name, u.department, count(*) AS numBeers, sum(b.volume) AS totalVolume FROM beers b JOIN users u ON b.userId=u.id GROUP BY u.id, u.cardId, u.name, u.department ORDER BY numBeers DESC LIMIT ?');
+            $stmt = $this->oDb->prepare('SELECT u.id, u.cardId, u.name, u.department, count(*) AS numBeers, sum(b.volume) AS totalVolume FROM beers b JOIN users u ON b.userId=u.id GROUP BY u.id, u.cardId, u.name, u.department ORDER BY ' . $sOrderBy . ' DESC LIMIT ?');
             $stmt->bindParam(1, $iNum, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iUserId, PDO::PARAM_INT);
@@ -291,6 +310,27 @@ class Database {
             die("Died inserting new row in 'beer' table: " . $e->getMessage());
         }
         return $aUsers;
+    }
+    
+    public function getTimeDistribution() {
+        
+    }
+    
+    public function getTapDistribution(): array {
+        $aTapDistribution = [];
+        try {
+            $stmt = $this->oDb->prepare('SELECT tap, count(*) as numBeers, sum(volume) AS totalVolume FROM beers GROUP BY tap');
+            $stmt->execute();
+            $stmt->bindColumn('tap', $iTap, PDO::PARAM_INT);
+            $stmt->bindColumn('numBeers', $iNumBeers, PDO::PARAM_INT);
+            $stmt->bindColumn('totalVolume', $iTotalVolume, PDO::PARAM_INT);
+            while ($stmt->fetch(PDO::FETCH_BOUND)) {
+                $aTapDistribution[] = new Tap($iTap, $iNumBeers, $iTotalVolume);
+            }
+        } catch (Exception $e) {
+            die("Died getting tap distribution: " . $e->getMessage());
+        }
+        return $aTapDistribution;
     }
 
     public function addBeer(string $sCardId, ?int $iVolume, ?int $iTap, ?int $iTimestamp): bool {

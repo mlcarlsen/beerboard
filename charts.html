@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta http-equiv="refresh" content="30"> 
+        <title>Charts</title>
+        <script type="text/javascript" src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+        <script type="text/javascript">
+            window.onload = function () {
+
+                $.ajax({
+                    url: '/beerService.php?action=topusers',
+                    method: 'get',
+                    dataType: 'json',
+                    success: function (data) {
+
+                        var userLabels = [];
+                        var userBeers = [];
+                        var userVolume = [];
+
+                        $(data).each(function (index, item) {
+                            if (item.name) {
+                                userLabels.push(item.name);
+                            } else {
+                                userLabels.push(item.cardId);
+                            }
+                            userBeers.push(item.numBeers);
+                            userVolume.push(item.totalVolume / 1000);
+                        });
+
+                        var ctx = document.getElementById('userBeersCanvas').getContext('2d');
+                        window.userBeers = new Chart(ctx, {
+                            type: 'horizontalBar',
+                            data: {
+                                datasets: [{
+                                        data: userBeers,
+                                        backgroundColor: [
+                                            "#660000",
+                                            "#6E0808",
+                                            "#761010",
+                                            "#7E1818",
+                                            "#862020",
+                                            "#8E2828",
+                                            "#963030",
+                                            "#9E3838",
+                                            "#A64040",
+                                            "#AE4848",
+                                            "#B65050",
+                                            "#BE5858",
+                                            "#C66060",
+                                            "#CE6868",
+                                            "#D67070",
+                                            "#DE7878",
+                                            "#E68080",
+                                            "#EE8888",
+                                            "#F69090",
+                                            "#FF9999"
+                                        ],
+                                        label: 'Number of beers'
+                                    }, {
+                                        data: userVolume,
+                                        backgroundColor: [
+                                            "#000066",
+                                            "#08086E",
+                                            "#101076",
+                                            "#18187E",
+                                            "#202086",
+                                            "#28288E",
+                                            "#303096",
+                                            "#383839",
+                                            "#4040A6",
+                                            "#4848AE",
+                                            "#5050B6",
+                                            "#5858BE",
+                                            "#6060C6",
+                                            "#6868CE",
+                                            "#7070D6",
+                                            "#7878DE",
+                                            "#8080E6",
+                                            "#8888EE",
+                                            "#9090F6",
+                                            "#9999FF"
+                                        ],
+                                        label: 'Volume (l)'
+                                    }],
+                                labels: userLabels
+                            },
+                            options: {
+                                responsive: true,
+                                legend: {
+                                    position: 'right',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Chart.js Horizontal Bar Chart'
+                                }
+                            }
+                        });
+
+                    },
+                    error: function (err) {
+                        alert(err);
+                    }
+                });
+
+                
+
+                $.ajax({
+                    url: '/beerService.php?action=tapdistribution',
+                    method: 'get',
+                    dataType: 'json',
+                    success: function (data) {
+
+                        var tapLabels = [];
+                        var tapVolume = [];
+                        var tapBeers = [];
+
+                        $(data).each(function (index, item) {
+                            tapLabels.push('Tap ' + item.tap);
+                            tapVolume.push(item.totalVolume/1000);
+                            tapBeers.push(item.numBeers);
+                        });
+
+                        var ctx = document.getElementById('tapBeersCanvas').getContext('2d');
+                        window.tapVolume = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                datasets: [{
+                                        data: tapBeers,
+                                        backgroundColor: [
+                                            "#ff0000",
+                                            "#00ff00",
+                                            "#0000ff",
+                                            "#ffff00"
+                                        ],
+                                        label: 'Beer volume from tap (l)'
+                                    }],
+                                labels: tapLabels
+                            },
+                            options: {
+                                responsive: true,
+                                legend: {
+                                    position: 'right'
+                                },
+                                title: {
+					display: true,
+					text: 'Tap distribution by number'
+				},
+                            }
+                        });
+                        
+                        var ctx = document.getElementById('tapVolumeCanvas').getContext('2d');
+                        window.tapVolume = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                datasets: [{
+                                        data: tapVolume,
+                                        backgroundColor: [
+                                            "#ff0000",
+                                            "#00ff00",
+                                            "#0000ff",
+                                            "#ffff00"
+                                        ],
+                                        label: 'Beer volume from tap (l)'
+                                    }],
+                                labels: tapLabels
+                            },
+                            options: {
+                                responsive: true,
+                                legend: {
+                                    position: 'right'
+                                },
+                                title: {
+					display: true,
+					text: 'Tap distribution by volume (l)'
+				},
+                            }
+                        });
+                        
+                        
+                    },
+                    error: function (err) {
+                        alert(err);
+                    }
+                });
+
+
+
+            };
+
+        </script>
+    </head>
+    <body>
+        <table id="navigator">
+            <tr>
+                <td><a href="home.html">Main</a></td>
+                <td><a href="log.html">Log</a></td>
+                <td><a href="users.html">Users</a></td>
+                <td>Charts</td>
+            </tr>
+        </table>
+
+        <div id="container1" style="width: 75%;">
+            <canvas id="userBeersCanvas"></canvas>
+        </div>
+
+
+        <div id="container2" style="width: 45%; height: 300px; display:inline-block;">
+            <canvas id="tapVolumeCanvas"></canvas>
+        </div>
+
+        <div id="container3" style="width:45%; height: 300px; display:inline-block;">
+            <canvas id="tapBeersCanvas"></canvas>
+        </div>
+        <br/>
+
+        <!--
+        
+        <div id="canvas-holder3" style="width:30%; display:inline-block;">
+            <canvas id="tap-chart-area"></canvas>
+        </div>
+        -->
+
+    </body>
+</html>
