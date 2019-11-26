@@ -4,13 +4,14 @@
     <head>
         <meta http-equiv="refresh" content="30"> 
         <title>Charts</title>
+        <link rel="stylesheet" type="text/css" href="style.css">
         <script type="text/javascript" src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
         <script type="text/javascript">
             window.onload = function () {
 
                 $.ajax({
-                    url: '/beerService.php?action=topusers',
+                    url: '/beerService.php?action=topusers&num=30',
                     method: 'get',
                     dataType: 'json',
                     success: function (data) {
@@ -82,7 +83,7 @@
                                             "#9090F6",
                                             "#9999FF"
                                         ],
-                                        label: 'Volume (l)'
+                                        label: 'Volume (liters)'
                                     }],
                                 labels: userLabels
                             },
@@ -92,8 +93,7 @@
                                     position: 'right',
                                 },
                                 title: {
-                                    display: true,
-                                    text: 'Chart.js Horizontal Bar Chart'
+                                    display: false
                                 }
                             }
                         });
@@ -104,123 +104,23 @@
                     }
                 });
 
-                
-
-                $.ajax({
-                    url: '/beerService.php?action=tapdistribution',
-                    method: 'get',
-                    dataType: 'json',
-                    success: function (data) {
-
-                        var tapLabels = [];
-                        var tapVolume = [];
-                        var tapBeers = [];
-
-                        $(data).each(function (index, item) {
-                            tapLabels.push('Tap ' + item.tap);
-                            tapVolume.push(item.totalVolume/1000);
-                            tapBeers.push(item.numBeers);
-                        });
-
-                        var ctx = document.getElementById('tapBeersCanvas').getContext('2d');
-                        window.tapVolume = new Chart(ctx, {
-                            type: 'doughnut',
-                            data: {
-                                datasets: [{
-                                        data: tapBeers,
-                                        backgroundColor: [
-                                            "#ff0000",
-                                            "#00ff00",
-                                            "#0000ff",
-                                            "#ffff00"
-                                        ],
-                                        label: 'Beer volume from tap (l)'
-                                    }],
-                                labels: tapLabels
-                            },
-                            options: {
-                                responsive: true,
-                                legend: {
-                                    position: 'right'
-                                },
-                                title: {
-					display: true,
-					text: 'Tap distribution by number'
-				},
-                            }
-                        });
-                        
-                        var ctx = document.getElementById('tapVolumeCanvas').getContext('2d');
-                        window.tapVolume = new Chart(ctx, {
-                            type: 'doughnut',
-                            data: {
-                                datasets: [{
-                                        data: tapVolume,
-                                        backgroundColor: [
-                                            "#ff0000",
-                                            "#00ff00",
-                                            "#0000ff",
-                                            "#ffff00"
-                                        ],
-                                        label: 'Beer volume from tap (l)'
-                                    }],
-                                labels: tapLabels
-                            },
-                            options: {
-                                responsive: true,
-                                legend: {
-                                    position: 'right'
-                                },
-                                title: {
-					display: true,
-					text: 'Tap distribution by volume (l)'
-				},
-                            }
-                        });
-                        
-                        
-                    },
-                    error: function (err) {
-                        alert(err);
-                    }
-                });
-
-
-
             };
 
         </script>
     </head>
     <body>
-        <table id="navigator">
-            <tr>
-                <td><a href="home.html">Main</a></td>
-                <td><a href="log.html">Log</a></td>
-                <td><a href="users.html">Users</a></td>
-                <td>Charts</td>
-            </tr>
-        </table>
+        <div class="topnav">
+            <a href="log.html">Beer log</a>
+            <a href="users.html">Top user list</a>
+            <a class="active" href="charts.html">Top user chart</a>
+            <a href="tap.html">Tap distribution</a>
+        </div>
 
-        <div id="container1" style="width: 75%;">
+        <div id="container1" style="position: relative; width: 100%; height: 800px">
             <canvas id="userBeersCanvas"></canvas>
         </div>
 
-
-        <div id="container2" style="width: 45%; height: 300px; display:inline-block;">
-            <canvas id="tapVolumeCanvas"></canvas>
-        </div>
-
-        <div id="container3" style="width:45%; height: 300px; display:inline-block;">
-            <canvas id="tapBeersCanvas"></canvas>
-        </div>
         <br/>
-
-        <!--
-        
-        <div id="canvas-holder3" style="width:30%; display:inline-block;">
-            <canvas id="tap-chart-area"></canvas>
-        </div>
-        -->
 
     </body>
 </html>

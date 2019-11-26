@@ -164,13 +164,13 @@ class User {
 class ExtendedUser extends User {
 
     public $beers = [];
+    public $totalVolume;
 
     public function __construct(string $sCardId, int $iId, string $sName, string $sDepartment, array $beers) {
         parent::__construct($sCardId, $iId, $sName, $sDepartment, sizeof($beers));
         $this->beers = $beers;
         foreach($beers as $beer) {
             $this->Totalvolume += $beer->volume;
-            print_r($beer);
         }
     }
 
@@ -196,7 +196,7 @@ class Beer {
         }
     }
 
-    public function getFormattedTimestamp(string $sFormatToday = 'h:m:s', string $sFormatOlder = 'd/m h:m:s'): string {
+    public function getFormattedTimestamp(string $sFormatToday = 'h:m:s', string $sFormatOlder = 'h:m:s d/m'): string {
         if (date('YMd', $this->timestamp) === date('YMd')) {
             return date($sFormatToday, $this->timestamp);
         } else {
@@ -440,9 +440,11 @@ class Database {
 
     public function getUser(string $sCardId): ?ExtendedUser {
         $iUserId = null;
+        $sName = null;
+        $sDepartment = null;
         try {
             logM("Fetching user information for cardId=$sCardId");
-            $stmt = $this->oDb->prepare('SELECT id, name, department, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(updated) AS updated FROM users WHERE cardId=?');
+            $stmt = $this->oDb->prepare("SELECT id, IFNULL(name,'N/A') AS name, IFNULL(department, 'N/A') AS department, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(updated) AS updated FROM users WHERE cardId=?");
             $stmt->bindParam(1, $sCardId, PDO::PARAM_STR);
             $stmt->execute();
             $stmt->bindColumn('id', $iUserId, PDO::PARAM_INT);
@@ -458,7 +460,7 @@ class Database {
         $aBeers = [];
         try {
             logM("Fetching beer information for userId=$iUserId");
-            $stmt = $this->oDb->prepare('SELECT id, tap, volume, UNIX_TIMESTAMP(timestamp) AS timestamp FROM beers WHERE userId=?');
+            $stmt = $this->oDb->prepare('SELECT id, tap, volume, UNIX_TIMESTAMP(timestamp) AS timestamp FROM beers WHERE userId=? ORDER BY timestamp DESC');
             $stmt->bindParam(1, $iUserId, PDO::PARAM_INT);
             $stmt->execute();
             $stmt->bindColumn('id', $iId, PDO::PARAM_INT);
