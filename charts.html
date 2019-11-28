@@ -3,7 +3,7 @@
 <html>
     <head>
         <meta http-equiv="refresh" content="30"> 
-        <title>Charts</title>
+        <title>Top user chart</title>
         <link rel="stylesheet" type="text/css" href="style.css">
         <script type="text/javascript" src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
@@ -33,56 +33,17 @@
                         var ctx = document.getElementById('userBeersCanvas').getContext('2d');
                         window.userBeers = new Chart(ctx, {
                             type: 'horizontalBar',
+                            
                             data: {
                                 datasets: [{
+                                        fillColor: "rgba(0,60,100,1)",
+                                        strokeColor: "black",
                                         data: userBeers,
-                                        backgroundColor: [
-                                            "#660000",
-                                            "#6E0808",
-                                            "#761010",
-                                            "#7E1818",
-                                            "#862020",
-                                            "#8E2828",
-                                            "#963030",
-                                            "#9E3838",
-                                            "#A64040",
-                                            "#AE4848",
-                                            "#B65050",
-                                            "#BE5858",
-                                            "#C66060",
-                                            "#CE6868",
-                                            "#D67070",
-                                            "#DE7878",
-                                            "#E68080",
-                                            "#EE8888",
-                                            "#F69090",
-                                            "#FF9999"
-                                        ],
+                                        backgroundColor: "#C66060",
                                         label: 'Number of beers'
                                     }, {
                                         data: userVolume,
-                                        backgroundColor: [
-                                            "#000066",
-                                            "#08086E",
-                                            "#101076",
-                                            "#18187E",
-                                            "#202086",
-                                            "#28288E",
-                                            "#303096",
-                                            "#383839",
-                                            "#4040A6",
-                                            "#4848AE",
-                                            "#5050B6",
-                                            "#5858BE",
-                                            "#6060C6",
-                                            "#6868CE",
-                                            "#7070D6",
-                                            "#7878DE",
-                                            "#8080E6",
-                                            "#8888EE",
-                                            "#9090F6",
-                                            "#9999FF"
-                                        ],
+                                        backgroundColor: "#202086",
                                         label: 'Volume (liters)'
                                     }],
                                 labels: userLabels
@@ -116,11 +77,50 @@
             <a href="tap.html">Tap distribution</a>
         </div>
 
-        <div id="container1" style="position: relative; width: 100%; height: 800px">
+        <div id="container1" style="position: relative; width: 100%; height: 800px; margin-top:10px;">
             <canvas id="userBeersCanvas"></canvas>
         </div>
 
         <br/>
 
+        <div class="snowflakes" aria-hidden="true">
+            <div class="snowflake">
+                ❅
+            </div>
+            <div class="snowflake">
+                ❆
+            </div>
+            <div class="snowflake">
+                ❅
+            </div>
+            <div class="snowflake">
+                ❆
+            </div>
+            <div class="snowflake">
+                ❅
+            </div>
+            <div class="snowflake">
+                ❆
+            </div>
+            <div class="snowflake">
+                ❅
+            </div>
+            <div class="snowflake">
+                ❆
+            </div>
+            <div class="snowflake">
+                ❅
+            </div>
+            <div class="snowflake">
+                ❆
+            </div>
+            <div class="snowflake">
+                ❅
+            </div>
+            <div class="snowflake">
+                ❆
+               </div>
+        </div>
+        
     </body>
 </html>

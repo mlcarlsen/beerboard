@@ -3,7 +3,7 @@
 <html>
     <head>
         <meta http-equiv="refresh" content="30"> 
-        <title>Charts</title>
+        <title>Tap distribution</title>
         <link rel="stylesheet" type="text/css" href="style.css">
         <script type="text/javascript" src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
@@ -21,7 +21,7 @@
 
                         $(data).each(function (index, item) {
                             tapLabels.push('Tap ' + item.tap);
-                            tapVolume.push(item.totalVolume/1000);
+                            tapVolume.push(item.totalVolume / 1000);
                             tapBeers.push(item.numBeers);
                         });
 
@@ -32,10 +32,10 @@
                                 datasets: [{
                                         data: tapBeers,
                                         backgroundColor: [
-                                            "#ff0000",
-                                            "#00ff00",
-                                            "#0000ff",
-                                            "#ffff00"
+                                            "#fcd303",
+                                            "#cca412",
+                                            "#b08319",
+                                            "#544218"
                                         ],
                                         label: 'Beer volume from tap (l)'
                                     }],
@@ -44,15 +44,15 @@
                             options: {
                                 responsive: true,
                                 legend: {
-                                    position: 'right'
+                                    position: 'bottom'
                                 },
                                 title: {
-					display: true,
-					text: 'Tap distribution by number of beers served'
-				},
+                                    display: true,
+                                    text: 'Tap distribution by number of beers served'
+                                },
                             }
                         });
-                        
+
                         var ctx = document.getElementById('tapVolumeCanvas').getContext('2d');
                         window.tapVolume = new Chart(ctx, {
                             type: 'doughnut',
@@ -60,10 +60,10 @@
                                 datasets: [{
                                         data: tapVolume,
                                         backgroundColor: [
-                                            "#ff0000",
-                                            "#00ff00",
-                                            "#0000ff",
-                                            "#ffff00"
+                                            "#fcd303",
+                                            "#cca412",
+                                            "#b08319",
+                                            "#544218"
                                         ],
                                         label: 'Beer volume from tap (l)'
                                     }],
@@ -72,16 +72,16 @@
                             options: {
                                 responsive: true,
                                 legend: {
-                                    position: 'right'
+                                    position: 'bottom'
                                 },
                                 title: {
-					display: true,
-					text: 'Tap distribution by volume (liters)'
-				},
+                                    display: true,
+                                    text: 'Tap distribution by volume (liters)'
+                                },
                             }
                         });
-                        
-                        
+
+
                     },
                     error: function (err) {
                         alert(err);
@@ -103,14 +103,53 @@
         </div>
 
 
-        <div id="container1" style="width: 45%; height: 300px; display:inline-block;">
+        <div id="container1" style="width: 49%; height: 400px; display:inline-block; margin-top:100px;">
             <canvas id="tapVolumeCanvas"></canvas>
         </div>
 
-        <div id="container2" style="width:45%; height: 300px; display:inline-block;">
+        <div id="container2" style="width:49%; height: 400px; display:inline-block;">
             <canvas id="tapBeersCanvas"></canvas>
         </div>
         <br/>
+
+        <div class="snowflakes" aria-hidden="true">
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+            <div class="snowflake">
+                🎄
+            </div>
+        </div>
 
     </body>
 </html>
