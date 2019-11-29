@@ -196,7 +196,7 @@ class Beer {
         }
     }
 
-    public function getFormattedTimestamp(string $sFormatToday = 'h:m:s', string $sFormatOlder = 'h:m:s d/m'): string {
+    public function getFormattedTimestamp(string $sFormatToday = 'H:m:s', string $sFormatOlder = 'H:m:s d/m'): string {
         if (date('YMd', $this->timestamp) === date('YMd')) {
             return date($sFormatToday, $this->timestamp);
         } else {
